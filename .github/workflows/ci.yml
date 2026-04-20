@@ -12,6 +12,9 @@ concurrency:
 
 jobs:
 
+  # ================================
+  # 🔍 LINT JOB (FIXED)
+  # ================================
   lint:
     name: Lint (golangci-lint)
     runs-on: ubuntu-latest
@@ -25,12 +28,20 @@ jobs:
         with:
           go-version: "1.25.0"
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
+      - name: Install golangci-lint (Go-compatible)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+          | sh -s -- -b $(go env GOPATH)/bin v1.64.8
 
+      - name: Verify golangci-lint version
+        run: golangci-lint --version
+
+      - name: Run golangci-lint
+        run: golangci-lint run --timeout=5m
+
+  # ================================
+  # 🔐 SECURITY JOB
+  # ================================
   security:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -56,6 +67,9 @@ jobs:
       - name: Run govulncheck
         run: govulncheck ./...
 
+  # ================================
+  # 🧪 TEST JOB
+  # ================================
   test:
     name: Tests & Coverage
     runs-on: ubuntu-latest
@@ -101,6 +115,9 @@ jobs:
             coverage.out
             coverage.html
 
+  # ================================
+  # 🐳 BUILD JOB
+  # ================================
   build:
     name: Build (Go + Docker)
     runs-on: ubuntu-latest
@@ -124,7 +141,9 @@ jobs:
             -f deployments/docker/Dockerfile \
             -t go-notification-system:latest .
 
-  # Optional: future deployment stage
+  # ================================
+  # 🚀 DEPLOY JOB (OPTIONAL)
+  # ================================
   deploy:
     name: Deploy (optional)
     runs-on: ubuntu-latest
