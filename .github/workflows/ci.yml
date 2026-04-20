@@ -131,6 +131,13 @@ jobs:
 
       - name: Run tests
         run: ./scripts/test.sh
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.out
+          fail_ci_if_error: true
 
       - name: Generate coverage HTML
         run: go tool cover -html=coverage.out -o coverage.html
