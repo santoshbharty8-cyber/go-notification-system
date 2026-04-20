@@ -20,25 +20,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+        - name: Checkout code
+          uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25.0"
+        - name: Setup Go
+          uses: actions/setup-go@v5
+          with:
+            go-version: "1.25.0"
 
-      - name: Install golangci-lint (Go-compatible)
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-          | sh -s -- -b $(go env GOPATH)/bin v1.64.8
+        - name: Clear any old cache (IMPORTANT)
+          run: |
+            rm -rf ~/.cache/golangci-lint
+            rm -rf $(go env GOPATH)/bin/golangci-lint || true
 
-      - name: Verify golangci-lint version
-        run: golangci-lint --version
+        - name: Install golangci-lint (latest)
+          run: |
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+            | sh -s -- -b $(go env GOPATH)/bin latest
 
-      - name: Run golangci-lint
-        run: golangci-lint run --timeout=5m
+        - name: Check version (VERY IMPORTANT DEBUG STEP)
+          run: golangci-lint --version
 
+        - name: Run golangci-lint
+          run: golangci-lint run --timeout=5m
   # ================================
   # 🔐 SECURITY JOB
   # ================================
