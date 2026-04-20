@@ -4,13 +4,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"go-notification-system/internal/ratelimiter"
 )
 
 func TestRateLimitMiddleware(t *testing.T) {
 
-	limiter := ratelimiter.NewLimiter(1, 10)
+	limiter := ratelimiter.NewLimiter(1, time.Minute)
 
 	handler := RateLimitMiddleware(limiter, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -18,20 +19,20 @@ func TestRateLimitMiddleware(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/", nil)
 
-	// first request → allowed
+	// First request → allowed
 	w1 := httptest.NewRecorder()
 	handler(w1, req)
 
 	if w1.Code != 200 {
-		t.Errorf("expected 200")
+		t.Fatalf("expected 200, got %d", w1.Code)
 	}
 
-	// second request → blocked
+	// Second request → should be blocked
 	w2 := httptest.NewRecorder()
 	handler(w2, req)
 
-	if w2.Code != 429 {
-		t.Errorf("expected 429")
+	if w2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429, got %d", w2.Code)
 	}
 }
 
