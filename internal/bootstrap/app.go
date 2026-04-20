@@ -78,8 +78,8 @@ func StartServer() {
 		zap.String("addr", server.Addr),
 	)
 
-	// ✅ FIXED: handle ListenAndServe error
-	if err := http.ListenAndServe(server.Addr, nil); err != nil {
+	
+	if err := server.ListenAndServe(); err != nil {
 		logger.Error("server failed to start",
 			zap.Error(err),
 		)

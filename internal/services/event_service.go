@@ -1,8 +1,9 @@
 package services
 
 import (
+	"crypto/rand"
 	"errors"
-	"math/rand"
+	"math/big"
 
 	"go-notification-system/internal/logger"
 	"go-notification-system/internal/models"
@@ -11,7 +12,11 @@ import (
 )
 
 var randomFail = func() bool {
-	return rand.Intn(3) == 0
+	n, err := rand.Int(rand.Reader, big.NewInt(3))
+	if err != nil {
+		return false // safe fallback
+	}
+	return n.Int64() == 0
 }
 
 func ProcessEvent(event models.Event) error {

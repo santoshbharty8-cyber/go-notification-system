@@ -132,5 +132,18 @@ func processWithRetry(workerID int, event models.Event) {
 
 func backoff(attempt int) time.Duration {
 	base := config.AppConfig.BackoffSeconds
-	return time.Duration(base*(1<<uint(attempt-1))) * time.Second
+
+	if attempt <= 0 {
+		attempt = 1
+	}
+
+	// cap to avoid overflow (important)
+	maxShift := 10 // 2^10 = 1024 max multiplier
+	if attempt-1 > maxShift {
+		attempt = maxShift + 1
+	}
+
+	delay := base * (1 << (attempt - 1))
+
+	return time.Duration(delay) * time.Second
 }
