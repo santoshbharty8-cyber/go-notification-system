@@ -10,42 +10,42 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  GOFLAGS: "-buildvcs=false"
+
 jobs:
 
-  # ================================
-  # 🔍 LINT JOB (FIXED)
-  # ================================
+
   lint:
     name: Lint (golangci-lint)
     runs-on: ubuntu-latest
 
     steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Setup Go
-          uses: actions/setup-go@v5
-          with:
-            go-version: "1.25.0"
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
 
-        - name: Clear any old cache (IMPORTANT)
-          run: |
-            rm -rf ~/.cache/golangci-lint
-            rm -rf $(go env GOPATH)/bin/golangci-lint || true
+      - name: Clear old cache
+        run: |
+          rm -rf ~/.cache/golangci-lint
+          rm -rf $(go env GOPATH)/bin/golangci-lint || true
 
-        - name: Install golangci-lint (latest)
-          run: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-            | sh -s -- -b $(go env GOPATH)/bin latest
+      - name: Install golangci-lint (latest)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+          | sh -s -- -b $(go env GOPATH)/bin latest
 
-        - name: Check version (VERY IMPORTANT DEBUG STEP)
-          run: golangci-lint --version
+      - name: Verify golangci-lint
+        run: golangci-lint --version
 
-        - name: Run golangci-lint
-          run: golangci-lint run --timeout=5m
-  # ================================
-  # 🔐 SECURITY JOB
-  # ================================
+      - name: Run lint
+        run: golangci-lint run --timeout=5m
+
+ 
   security:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -57,7 +57,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.0"
+          go-version: "stable"
 
       - name: Install Gosec
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
@@ -71,9 +71,7 @@ jobs:
       - name: Run govulncheck
         run: govulncheck ./...
 
-  # ================================
-  # 🧪 TEST JOB
-  # ================================
+ 
   test:
     name: Tests & Coverage
     runs-on: ubuntu-latest
@@ -86,10 +84,10 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.0"
+          go-version: "stable"
           cache: true
 
-      - name: Cache Go build
+      - name: Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -102,16 +100,16 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Make test script executable
+      - name: Make script executable
         run: chmod +x scripts/test.sh
 
-      - name: Run tests with coverage
+      - name: Run tests
         run: ./scripts/test.sh
 
-      - name: Generate HTML coverage report
+      - name: Generate coverage HTML
         run: go tool cover -html=coverage.out -o coverage.html
 
-      - name: Upload coverage artifact
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -119,9 +117,7 @@ jobs:
             coverage.out
             coverage.html
 
-  # ================================
-  # 🐳 BUILD JOB
-  # ================================
+
   build:
     name: Build (Go + Docker)
     runs-on: ubuntu-latest
@@ -134,7 +130,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.0"
+          go-version: "stable"
 
       - name: Build Go binary
         run: go build -v ./cmd/api
@@ -145,9 +141,6 @@ jobs:
             -f deployments/docker/Dockerfile \
             -t go-notification-system:latest .
 
-  # ================================
-  # 🚀 DEPLOY JOB (OPTIONAL)
-  # ================================
   deploy:
     name: Deploy (optional)
     runs-on: ubuntu-latest
