@@ -1,0 +1,55 @@
+services:
+  go-service:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile
+    container_name: go-notification-service
+
+    ports:
+      - "8080:8080"
+
+    restart: always
+
+    env_file:
+      - ../../.env.dev
+
+    environment:
+      APP_ENV: dev
+      REDIS_URL: redis:6379
+      LOG_LEVEL: debug
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+
+    ports:
+      - "6379:6379"
+
+    restart: always
+
+    volumes:
+      - redis_data:/data
+
+    command: ["redis-server", "--appendonly", "yes"]
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+    networks:
+      - app-network
+
+volumes:
+  redis_data:
+
+networks:
+  app-network:
