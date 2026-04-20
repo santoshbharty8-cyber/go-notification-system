@@ -7,7 +7,7 @@ A production-grade, event-driven backend system built using **Golang + Redis**, 
 ![CI](https://github.com/santoshbharty8-cyber/go-notification-system/actions/workflows/ci.yml/badge.svg)
 ![Coverage](https://codecov.io/gh/santoshbharty8-cyber/go-notification-system/branch/main/graph/badge.svg)
 
-> 📊 Test Coverage: **94%+**
+> 📊 Test Coverage: **91%+**
 
 ## 🎯 Key Features
 
@@ -19,7 +19,7 @@ A production-grade, event-driven backend system built using **Golang + Redis**, 
 - 🧠 Idempotency (atomic SET NX)
 - 📬 Dead Letter Queue (DLQ)
 - 🔒 Security scanning (gosec + govulncheck)
-- 🧪 High test coverage (~94%)
+- 🧪 High test coverage (~91%)
 - 🚀 CI/CD pipeline (GitHub Actions)
 - 🐳 Docker-ready setup
 
@@ -179,7 +179,7 @@ GitHub Actions pipeline includes:
 - ✔ Lint (`golangci-lint`)
 - ✔ Security Scan (`gosec`)
 - ✔ Vulnerability Scan (`govulncheck`)
-- ✔ Tests + Coverage (~94%)
+- ✔ Tests + Coverage (~91%)
 - ✔ Docker Build
 
 ## 📈 Future Improvements
