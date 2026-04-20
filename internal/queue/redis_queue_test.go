@@ -66,7 +66,9 @@ func TestPushToRedisQueueRedisNil(t *testing.T) {
 func TestPushToRedisQueueRedisClosed(t *testing.T) {
 	setup()
 
-	redisclient.Client.Close()
+	if err := redisclient.Client.Close(); err != nil {
+		t.Log(err)
+	}
 
 	err := PushToRedisQueue(models.Event{ID: "q3"})
 	if err == nil {

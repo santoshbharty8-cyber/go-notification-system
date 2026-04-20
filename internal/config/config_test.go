@@ -5,6 +5,13 @@ import (
 	"testing"
 )
 
+// 🔥 helper for safe env setup
+func mustSetEnv(t *testing.T, key, value string) {
+	t.Helper()
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestLoadConfigDefaults(t *testing.T) {
 
@@ -32,11 +39,11 @@ func TestLoadConfigDefaults(t *testing.T) {
 
 func TestLoadConfigWithEnv(t *testing.T) {
 
-	os.Setenv("APP_ENV", "test")
-	os.Setenv("REDIS_URL", "localhost:6379")
-	os.Setenv("WORKER_COUNT", "5")
-	os.Setenv("MAX_RETRIES", "4")
-	os.Setenv("DLQ_SIZE", "50")
+	mustSetEnv(t, "APP_ENV", "test")
+	mustSetEnv(t, "REDIS_URL", "localhost:6379")
+	mustSetEnv(t, "WORKER_COUNT", "5")
+	mustSetEnv(t, "MAX_RETRIES", "4")
+	mustSetEnv(t, "DLQ_SIZE", "50")
 
 	LoadConfig()
 
@@ -54,7 +61,8 @@ func TestLoadConfigWithEnv(t *testing.T) {
 }
 
 func TestGetEnv(t *testing.T) {
-	os.Setenv("TEST_KEY", "value")
+
+	mustSetEnv(t, "TEST_KEY", "value")
 
 	val := getEnv("TEST_KEY", "default")
 
@@ -64,6 +72,7 @@ func TestGetEnv(t *testing.T) {
 }
 
 func TestGetEnvDefault(t *testing.T) {
+
 	val := getEnv("UNKNOWN_KEY", "default")
 
 	if val != "default" {
@@ -72,7 +81,8 @@ func TestGetEnvDefault(t *testing.T) {
 }
 
 func TestGetEnvAsInt(t *testing.T) {
-	os.Setenv("INT_KEY", "5")
+
+	mustSetEnv(t, "INT_KEY", "5")
 
 	val := getEnvAsInt("INT_KEY", 1)
 
@@ -82,7 +92,8 @@ func TestGetEnvAsInt(t *testing.T) {
 }
 
 func TestGetEnvAsIntInvalid(t *testing.T) {
-	os.Setenv("INT_KEY", "abc")
+
+	mustSetEnv(t, "INT_KEY", "abc")
 
 	val := getEnvAsInt("INT_KEY", 2)
 
@@ -93,7 +104,6 @@ func TestGetEnvAsIntInvalid(t *testing.T) {
 
 func TestLoadConfig_Defaults(t *testing.T) {
 
-	// clear env (important)
 	os.Clearenv()
 
 	LoadConfig()
@@ -121,13 +131,16 @@ func TestLoadConfigWithEnvFile(t *testing.T) {
 	file := ".env.test"
 	content := "WORKER_COUNT=7\n"
 
-	err := os.WriteFile(file, []byte(content), 0644)
-	if err != nil {
+	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file)
 
-	os.Setenv("APP_ENV", "test")
+	// cleanup (safe ignore)
+	defer func() {
+		_ = os.Remove(file)
+	}()
+
+	mustSetEnv(t, "APP_ENV", "test")
 
 	LoadConfig()
 

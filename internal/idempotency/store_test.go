@@ -20,7 +20,9 @@ func setup() {
 	redisclient.InitRedis(config.AppConfig.RedisURL)
 
 	// clean before tests
-	redisclient.Client.FlushDB(redisclient.Ctx)
+	if err := redisclient.Client.FlushDB(redisclient.Ctx).Err(); err != nil {
+		panic(err)
+	}
 }
 
 func TestIsProcessed(t *testing.T) {
@@ -28,7 +30,6 @@ func TestIsProcessed(t *testing.T) {
 
 	id := "id-1"
 
-	// initially false
 	ok, err := IsProcessed(id)
 	if err != nil {
 		t.Fatal(err)
@@ -37,8 +38,9 @@ func TestIsProcessed(t *testing.T) {
 		t.Errorf("expected false initially")
 	}
 
-	// mark it
-	_, _ = TryMarkProcessing(id)
+	if _, err := TryMarkProcessing(id); err != nil {
+		t.Fatal(err)
+	}
 
 	ok, err = IsProcessed(id)
 	if err != nil {
@@ -54,11 +56,18 @@ func TestDeleteMark(t *testing.T) {
 
 	id := "id-2"
 
-	_, _ = TryMarkProcessing(id)
+	if _, err := TryMarkProcessing(id); err != nil {
+		t.Fatal(err)
+	}
 
-	DeleteMark(id)
+	if err := DeleteMark(id); err != nil {
+		t.Fatal(err)
+	}
 
-	ok, _ := IsProcessed(id)
+	ok, err := IsProcessed(id)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if ok {
 		t.Errorf("expected false after delete")
 	}
@@ -69,11 +78,11 @@ func TestExtendTTL(t *testing.T) {
 
 	id := "id-3"
 
-	_, _ = TryMarkProcessing(id)
+	if _, err := TryMarkProcessing(id); err != nil {
+		t.Fatal(err)
+	}
 
-	// extend TTL
-	err := ExtendTTL(id, 10*time.Second)
-	if err != nil {
+	if err := ExtendTTL(id, 10*time.Second); err != nil {
 		t.Fatal(err)
 	}
 
@@ -92,12 +101,18 @@ func TestTryMarkProcessingDuplicate(t *testing.T) {
 
 	id := "id-4"
 
-	ok, _ := TryMarkProcessing(id)
+	ok, err := TryMarkProcessing(id)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !ok {
 		t.Errorf("expected first call true")
 	}
 
-	ok, _ = TryMarkProcessing(id)
+	ok, err = TryMarkProcessing(id)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if ok {
 		t.Errorf("expected duplicate false")
 	}
@@ -106,13 +121,10 @@ func TestTryMarkProcessingDuplicate(t *testing.T) {
 func TestTryMarkProcessingRedisError(t *testing.T) {
 	setup()
 
-	// simulate Redis failure
 	redisclient.Client = nil
-
 	defer redisclient.InitRedis(config.AppConfig.RedisURL)
 
 	_, err := TryMarkProcessing("err-id")
-
 	if err == nil {
 		t.Errorf("expected error when Redis is nil")
 	}
@@ -122,11 +134,9 @@ func TestIsProcessedRedisError(t *testing.T) {
 	setup()
 
 	redisclient.Client = nil
-
 	defer redisclient.InitRedis(config.AppConfig.RedisURL)
 
 	_, err := IsProcessed("err-id")
-
 	if err == nil {
 		t.Errorf("expected error when Redis is nil")
 	}
@@ -139,7 +149,6 @@ func TestDeleteMarkRedisNil(t *testing.T) {
 	defer redisclient.InitRedis(config.AppConfig.RedisURL)
 
 	err := DeleteMark("id")
-
 	if err == nil {
 		t.Errorf("expected error when redis is nil")
 	}
@@ -152,7 +161,6 @@ func TestExtendTTLRedisNil(t *testing.T) {
 	defer redisclient.InitRedis(config.AppConfig.RedisURL)
 
 	err := ExtendTTL("id", 10*time.Second)
-
 	if err == nil {
 		t.Errorf("expected error when redis is nil")
 	}
@@ -161,25 +169,26 @@ func TestExtendTTLRedisNil(t *testing.T) {
 func TestIsProcessedRedisClosed(t *testing.T) {
 	setup()
 
-	redisclient.Client.Close()
+	if err := redisclient.Client.Close(); err != nil {
+		t.Log(err)
+	}
 
 	_, err := IsProcessed("id")
-
 	if err == nil {
 		t.Errorf("expected error")
 	}
 
-	// restore
 	redisclient.InitRedis(config.AppConfig.RedisURL)
 }
 
 func TestTryMarkProcessingRedisClosed(t *testing.T) {
 	setup()
 
-	redisclient.Client.Close()
+	if err := redisclient.Client.Close(); err != nil {
+		t.Log(err)
+	}
 
 	_, err := TryMarkProcessing("id")
-
 	if err == nil {
 		t.Errorf("expected error")
 	}

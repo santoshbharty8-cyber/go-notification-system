@@ -10,11 +10,15 @@ import (
 func init() {
 	helpers.InitTestEnv()
 }
+
 func TestLoggingMiddleware(t *testing.T) {
 
 	handler := LoggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("ok"))
+
+		if _, err := w.Write([]byte("ok")); err != nil {
+			t.Fatal(err)
+		}
 	})
 
 	req := httptest.NewRequest("GET", "/", nil)

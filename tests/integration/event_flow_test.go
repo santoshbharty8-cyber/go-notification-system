@@ -12,6 +12,7 @@ import (
 	"go-notification-system/internal/config"
 	"go-notification-system/internal/handlers"
 	"go-notification-system/internal/logger"
+	"go-notification-system/internal/middleware"
 	"go-notification-system/internal/models"
 	"go-notification-system/internal/queue"
 	"go-notification-system/internal/redisclient"
@@ -59,7 +60,7 @@ func TestEventFlowEndToEnd(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Add request_id
-	ctx := context.WithValue(req.Context(), "request_id", "test-req-100")
+	ctx := context.WithValue(req.Context(), middleware.RequestIDKey, "test-req-100")
 	req = req.WithContext(ctx)
 
 	// 🔥 Call handler

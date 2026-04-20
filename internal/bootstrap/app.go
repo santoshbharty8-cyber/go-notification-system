@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -18,12 +19,15 @@ import (
 
 func StartServer() {
 
+	// 1️⃣ Load config
 	config.LoadConfig()
 
+	// 2️⃣ Init logger
 	logger.InitLogger(
 		config.AppConfig.AppEnv,
 		config.AppConfig.LogLevel,
 	)
+
 	logger.Info("Config loaded",
 		zap.String("env", config.AppConfig.AppEnv),
 		zap.Int("workers", config.AppConfig.WorkerCount),
@@ -31,26 +35,37 @@ func StartServer() {
 		zap.String("log_level", config.AppConfig.LogLevel),
 	)
 
+	// 3️⃣ Init Redis
 	redisclient.InitRedis(config.AppConfig.RedisURL)
 
+	// 4️⃣ Init DLQ
 	queue.InitDLQ(config.AppConfig.DLQSize)
 
+	// 5️⃣ Start workers
 	startRedisWorkerPool(config.AppConfig.WorkerCount)
 
+	// 6️⃣ Rate limiter
 	limiter := ratelimiter.NewLimiter(
 		config.AppConfig.RateLimit,
 		time.Duration(config.AppConfig.RateWindowSeconds)*time.Second,
 	)
 
 	// 7️⃣ Routes
+
 	http.HandleFunc("/event",
 		middleware.LoggingMiddleware(
 			middleware.RateLimitMiddleware(limiter, handlers.EventHandler),
 		),
 	)
 
+	// ✅ FIXED: health handler (errcheck + headers)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+
+		if _, err := w.Write([]byte("OK")); err != nil {
+			log.Println("failed to write health response:", err)
+		}
 	})
 
 	server := &http.Server{
@@ -63,7 +78,12 @@ func StartServer() {
 		zap.String("addr", server.Addr),
 	)
 
-	http.ListenAndServe(server.Addr, nil)
+	// ✅ FIXED: handle ListenAndServe error
+	if err := http.ListenAndServe(server.Addr, nil); err != nil {
+		logger.Error("server failed to start",
+			zap.Error(err),
+		)
+	}
 }
 
 func startRedisWorkerPool(count int) {

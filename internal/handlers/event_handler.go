@@ -16,31 +16,38 @@ import (
 
 var enqueueFunc = queue.PushToRedisQueue
 
+// 🔥 helper (centralized response handling)
+func writeJSON(w http.ResponseWriter, status int, resp models.APIResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		logger.Error("failed to write response", zap.Error(err))
+	}
+}
+
 func EventHandler(w http.ResponseWriter, r *http.Request) {
 
 	var event models.Event
 
 	// 🔹 Decode request body
-	err := json.NewDecoder(r.Body).Decode(&event)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.APIResponse{
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+		writeJSON(w, http.StatusBadRequest, models.APIResponse{
 			Status:  "error",
 			Message: "invalid request body",
 		})
 		return
 	}
 
-	// 🔥 Extract request_id from context
+	// 🔥 Extract request_id
 	requestID, _ := r.Context().Value(middleware.RequestIDKey).(string)
 
-	// 🔥 Attach to event (VERY IMPORTANT)
+	// 🔥 Attach metadata
 	event.RequestID = requestID
 	event.Timestamp = time.Now().Unix()
 
-	// 🔹 Validate event
-	err = validator.ValidateEvent(event)
-	if err != nil {
+	// 🔹 Validate
+	if err := validator.ValidateEvent(event); err != nil {
 
 		logger.Warn("Validation failed",
 			zap.String("event_id", event.ID),
@@ -48,18 +55,15 @@ func EventHandler(w http.ResponseWriter, r *http.Request) {
 			zap.Error(err),
 		)
 
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.APIResponse{
+		writeJSON(w, http.StatusBadRequest, models.APIResponse{
 			Status:  "error",
 			Message: err.Error(),
 		})
 		return
 	}
 
-	// 🔥 Push event to Redis queue
-	// err = queue.PushToRedisQueue(event)
-	err = enqueueFunc(event)
-	if err != nil {
+	// 🔥 Queue push
+	if err := enqueueFunc(event); err != nil {
 
 		logger.Error("Failed to enqueue event",
 			zap.String("event_id", event.ID),
@@ -67,8 +71,7 @@ func EventHandler(w http.ResponseWriter, r *http.Request) {
 			zap.Error(err),
 		)
 
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.APIResponse{
+		writeJSON(w, http.StatusInternalServerError, models.APIResponse{
 			Status:  "error",
 			Message: "failed to enqueue event",
 		})
@@ -81,10 +84,8 @@ func EventHandler(w http.ResponseWriter, r *http.Request) {
 		zap.String("request_id", requestID),
 	)
 
-	// 🔥 Success response (include request_id)
-	w.Header().Set("Content-Type", "application/json")
-
-	json.NewEncoder(w).Encode(models.APIResponse{
+	// 🔥 Success response
+	writeJSON(w, http.StatusOK, models.APIResponse{
 		Status:  "success",
 		Message: "event queued",
 		Data: map[string]string{
